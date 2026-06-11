@@ -63,7 +63,16 @@ export async function POST(req: NextRequest) {
   let query = supabase.from('movies').select('id')
 
   if (session.genre_filter?.length > 0) {
-    query = query.overlaps('genres', session.genre_filter)
+    // Only include movies where ALL their genres are in the selected list
+    // Using @> operator would require knowing the movie's genres upfront
+    // Instead: exclude movies that contain any genre NOT in the filter
+    const excluded = ['Action','Adventure','Animation','Comedy','Crime','Documentary',
+      'Drama','Fantasy','Horror','Mystery','Romance','Science Fiction','Thriller','War','Western']
+      .filter(g => !session.genre_filter.includes(g))
+
+    for (const genre of excluded) {
+      query = query.not('genres', 'cs', `{${genre}}`)
+    }
   }
   if (session.year_from) {
     query = query.gte('year', session.year_from)
