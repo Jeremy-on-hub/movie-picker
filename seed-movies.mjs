@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js'
 const SUPABASE_URL   = process.env.NEXT_PUBLIC_SUPABASE_URL
 const SUPABASE_KEY   = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 const TMDB_API_KEY   = process.env.TMDB_API_KEY
-const PAGES_TO_FETCH = 5  // 20 per page × 5 = 100 movies
+const PAGES_TO_FETCH = 50  // 20 per page × 50 = 1000 movies
 
 if (!SUPABASE_URL || !SUPABASE_KEY || !TMDB_API_KEY) {
   console.error('❌ Missing environment variables.')

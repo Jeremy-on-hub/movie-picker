@@ -1,7 +1,4 @@
 // app/api/start-voting/route.ts
-// Called when the admin clicks "Start Voting".
-// Assigns movies to participants and flips the session to voting phase.
-
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 
@@ -19,16 +16,40 @@ export async function POST(req: NextRequest) {
   if (sessionError || !session) {
     return NextResponse.json({ error: 'Session not found.' }, { status: 404 })
   }
-
   if (session.admin_participant_id !== participant_id) {
     return NextResponse.json({ error: 'Only the admin can start voting.' }, { status: 403 })
   }
-
   if (session.phase !== 'lobby') {
     return NextResponse.json({ error: 'Session is not in lobby phase.' }, { status: 400 })
   }
 
-  // Get all participants in the session
+  // ── Custom list mode ─────────────────────────────────────
+  // Movies were already added to session_movies during the lobby.
+  // Just flip the phase — don't touch session_movies.
+  if (session.custom_list_mode) {
+    const { data: existingMovies } = await supabase
+      .from('session_movies')
+      .select('id')
+      .eq('session_id', session_id)
+
+    if (!existingMovies?.length) {
+      return NextResponse.json({ error: 'No movies in the custom list yet.' }, { status: 400 })
+    }
+
+    const { error: updateError } = await supabase
+      .from('sessions')
+      .update({ phase: 'voting' })
+      .eq('id', session_id)
+
+    if (updateError) {
+      return NextResponse.json({ error: updateError.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  }
+
+  // ── Random pool mode ─────────────────────────────────────
+  // Get all participants
   const { data: participants, error: participantsError } = await supabase
     .from('participants')
     .select('id')
@@ -42,7 +63,6 @@ export async function POST(req: NextRequest) {
   let query = supabase.from('movies').select('id')
 
   if (session.genre_filter?.length > 0) {
-    // Filter movies that contain at least one of the selected genres
     query = query.overlaps('genres', session.genre_filter)
   }
   if (session.year_from) {
@@ -61,29 +81,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No movies found matching the filters.' }, { status: 400 })
   }
 
-  // Shuffle the movies randomly (Fisher-Yates shuffle)
+  // Shuffle and assign pool_size movies
   const shuffled = [...movies].sort(() => Math.random() - 0.5)
+  const assigned = shuffled.slice(0, session.pool_size)
 
-  // Assign pool_size movies to each participant
-  const sessionMovieRows: { session_id: string; movie_id: string }[] = []
-  const assignedMovieIds = new Set<string>()
+  const sessionMovieRows = assigned.map(movie => ({
+    session_id,
+    movie_id: movie.id,
+  }))
 
-  for (const participant of participants) {
-    // Pick movies for this participant (up to pool_size)
-    const assigned = shuffled.slice(0, session.pool_size)
-    for (const movie of assigned) {
-      // Avoid duplicate session_movie rows
-      if (!assignedMovieIds.has(movie.id)) {
-        assignedMovieIds.add(movie.id)
-        sessionMovieRows.push({
-          session_id,
-          movie_id: movie.id,
-        })
-      }
-    }
-  }
-
-  // Insert session_movies
   const { error: insertError } = await supabase
     .from('session_movies')
     .insert(sessionMovieRows)

@@ -119,23 +119,30 @@ export default function SessionPage({ params }: { params: Promise<{ code: string
   }, [session])
 
   useEffect(() => {
-    if (!session?.custom_list_mode) return
+    // Load custom movies whenever session loads or custom_list_mode is on
+    if (!session) return
 
     async function fetchCustomMovies() {
       const { data } = await supabase
-        .from('session_movies').select('movie_id, movies(*)').eq('session_id', session!.id)
+        .from('session_movies')
+        .select('movie_id, movies(*)')
+        .eq('session_id', session!.id)
       if (data) setCustomMovies(data.map((sm: any) => sm.movies).filter(Boolean))
     }
+
+    // Always fetch — voting page needs session_movies too
     fetchCustomMovies()
 
     const moviesChannel = supabase
       .channel(`session-movies-${session.id}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'session_movies', filter: `session_id=eq.${session.id}` },
-        () => fetchCustomMovies())
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'session_movies',
+        filter: `session_id=eq.${session.id}`,
+      }, () => fetchCustomMovies())
       .subscribe()
 
     return () => { supabase.removeChannel(moviesChannel) }
-  }, [session])
+  }, [session?.id])
 
   function moviePassesFilters(movie: Movie): boolean {
     if (!session) return true
