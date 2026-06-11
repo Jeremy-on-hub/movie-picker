@@ -1,11 +1,11 @@
 // app/join/page.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createBrowserClient } from '@/lib/supabase'
 
-export default function JoinPage() {
+function JoinForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const supabase = createBrowserClient()
@@ -79,11 +79,11 @@ export default function JoinPage() {
           ← Back
         </button>
         <button
-        onClick={() => router.push('/')}
-        className="text-base font-extrabold uppercase tracking-wide"
-        style={{ color: 'var(--color-primary)' }}
+          onClick={() => router.push('/')}
+          className="text-base font-extrabold uppercase tracking-wide"
+          style={{ color: 'var(--color-primary)' }}
         >
-        MOVIE <span style={{ color: 'var(--color-gold)' }}>PICKER</span>
+          MOVIE <span style={{ color: 'var(--color-gold)' }}>PICKER</span>
         </button>
         <div className="w-12" />
       </div>
@@ -91,8 +91,6 @@ export default function JoinPage() {
       {/* Content */}
       <div className="flex-1 flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-sm">
-
-          {/* Title */}
           <div className="mb-8">
             <h2
               className="text-2xl font-extrabold mb-1"
@@ -111,7 +109,6 @@ export default function JoinPage() {
             </p>
           </div>
 
-          {/* Card */}
           <div
             className="rounded-2xl p-6 flex flex-col gap-4"
             style={{
@@ -161,9 +158,22 @@ export default function JoinPage() {
               {loading ? 'Joining...' : 'Join Session →'}
             </button>
           </div>
-
         </div>
       </div>
     </main>
+  )
+}
+
+// Wrap in Suspense — required by Next.js when using useSearchParams()
+export default function JoinPage() {
+  return (
+    <Suspense fallback={
+      <main className="min-h-screen flex items-center justify-center"
+        style={{ backgroundColor: 'var(--color-bg)' }}>
+        <p style={{ color: 'var(--color-text-muted)' }}>Loading...</p>
+      </main>
+    }>
+      <JoinForm />
+    </Suspense>
   )
 }
