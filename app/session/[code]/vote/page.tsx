@@ -226,14 +226,14 @@ export default function VotePage({ params }: { params: Promise<{ code: string }>
           border: '1px solid var(--color-border)',
         }}>
           {/* Poster */}
-          {movie.poster_url && (
-            <img
-              src={movie.poster_url}
-              alt={movie.title}
-              className="w-full object-cover"
-              style={{ maxHeight: '380px' }}
-            />
-          )}
+            {movie.poster_url && (
+              <img
+                src={movie.poster_url}
+                alt={movie.title}
+                className="w-full object-contain"
+                style={{ maxHeight: '500px', backgroundColor: 'var(--color-surface-2)' }}
+              />
+            )}
 
           <div className="p-4">
             {/* Title + meta */}
